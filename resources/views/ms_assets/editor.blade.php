@@ -28,7 +28,7 @@
                     </select>
                     <input type="hidden" name="category_id" value="{{ $assets->category_id }}">
                 @else
-                    <select name="category_id" class="form-control" id="category_id" disabled>
+                    <select name="category_id" class="form-control" id="category_id" @if (!empty($assets->category_id)) disabled @endif>
                         <option value="">- PILIH -</option>
                         @foreach ($categories as $item)
                             @if ( empty($assets) )
@@ -38,7 +38,9 @@
                             @endif
                         @endforeach
                     </select>
-                    <input type="hidden" name="category_id" value="{{ $assets->category_id }}">
+                    @if (!empty($assets->category_id))
+                        <input type="hidden" name="category_id" value="{{ $assets->category_id }}">
+                    @endif
                 @endif
                 <span class="text-danger error-text category_id_error"></span>
             </div>
