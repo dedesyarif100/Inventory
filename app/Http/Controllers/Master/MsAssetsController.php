@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Imports\AssetsImport;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Helpers\FunctionHelper;
+use App\Models\master\Asset_item;
 
 class MsAssetsController extends Controller
 {
@@ -31,27 +32,20 @@ class MsAssetsController extends Controller
 
     public function index()
     {
+        $log = Log::where('asset_id', 2)->get()->toArray();
+        // dd($log);
         return view('ms_assets.index');
     }
 
     public function getAssets()
     {
         $assets = Asset::orderBy('id', 'DESC')->get();
+        // dd($assets->toArray());
         return DataTables::of($assets)
         ->addIndexColumn()
         ->editColumn('vendor', function ($assets) {
             return $assets->vendor->name;
         })
-        // ->editColumn('quantity', function ($assets) {
-        //     $log =  Log::where('asset_id', 1)->orderBy('id', 'DESC')->get();
-        //     $assetQuantity = Asset::where('id', $log)->get();
-        //     dd($assetQuantity);
-        //     if ($log->type == FunctionHelper::DIKEMBALIKAN || $log->type == FunctionHelper::BELI || $log->type == FunctionHelper::HIBAH) {
-        //         return '<div style="background-color: #bfdeff;"> '.$assetQuantity->quantity.' </div>';
-        //     } else if ($log->type == FunctionHelper::STOCK_AWAL) {
-        //         return '<div style="background-color: green;"> '.$assets->quantity.' </div>';
-        //     }
-        // })
         ->editColumn('quantity', function ($assets) {
             if ($assets->quantity == 0) {
                 return '<div style="background-color: #ff9999;"> '.$assets->quantity.' </div>';
@@ -60,11 +54,48 @@ class MsAssetsController extends Controller
             }
         })
         ->editColumn('status', function ($assets) {
-            if ($assets->status == 1) {
-                return '<span class="name badge bg-success" style="color: white;"> Normal </span>';
-            } else {
-                return '<span class="name badge bg-danger" style="color: white;"> Rusak </span>';
+            $asset_items = Asset_item::where('asset_id', $assets->id)->orderBy('id', 'DESC')->get();
+            // dd($asset_items);
+            $saveHelper = '';
+            $saveTotalType = '';
+            for ($a = 0; $a < count($asset_items); $a ++) {
+                if ($asset_items[$a]->type == FunctionHelper::DIKEMBALIKAN) {
+                    $saveHelper = '<span class="name badge bg-success" style="color: white;"> Dikembalikan </span>';
+                } else if ($asset_items[$a]->type == FunctionHelper::DIPINJAMKAN) {
+                    $saveHelper = '<span class="name badge bg-primary" style="color: white;"> Dipinjamkan </span>';
+                } else if ($asset_items[$a]->type == FunctionHelper::SERVICE) {
+                    $saveHelper = '<span class="name badge bg-warning" style="color: white;"> Services </span>';
+                } else if ($asset_items[$a]->type == FunctionHelper::RUSAK) {
+                    $saveHelper = '<span class="name badge bg-danger" style="color: white;"> Rusak </span>';
+                } else if ($asset_items[$a]->type == FunctionHelper::HILANG) {
+                    $saveHelper = '<span class="name badge bg-danger" style="color: white;"> Hilang </span>';
+                } else if ($asset_items[$a]->type == FunctionHelper::KELUAR) {
+                    $saveHelper = '<span class="name badge bg-info" style="color: white;"> Keluar </span>';
+                } else if ($asset_items[$a]->type == FunctionHelper::HIBAH) {
+                    $saveHelper = '<span class="name badge bg-secondary" style="color: white;"> Hibah </span>';
+                } else if ($asset_items[$a]->type == FunctionHelper::BELI) {
+                    $saveHelper = '<span class="name badge bg-success" style="color: white;"> Beli </span>';
+                } else if ($asset_items[$a]->type == FunctionHelper::JUAL) {
+                    $saveHelper = '<span class="name badge bg-primary" style="color: white;"> Jual </span>';
+                } else if ($asset_items[$a]->type == FunctionHelper::STOCK_AWAL) {
+                    $saveHelper = '<span class="name badge bg-success" style="color: white;"> Stock Awal </span>';
+                }
+                $saveHtml[$a] = $saveHelper;
             }
+            $save = array_count_values($saveHtml);
+            foreach ($save as $key => $value) {
+                $cek[] = '<span class="name badge bg-white" style="color: black;"> '.$value.' </span>'.''.$key;
+            }
+
+            // dd($cek);
+            // $collect = collect($saveHtml);
+            // $counted = $collect->countBy();
+            // dd($counted->toArray());
+            // $cek = implode($counted->toArray());
+            // $save = ;
+            // implode('<br>', array_unique($saveHtml)).''.implode($counted->toArray());
+
+            return implode('<br>', array_unique($cek));
         })
         ->editColumn('notes', function ($assets) {
             return $assets->notes ?? '--';
@@ -79,7 +110,7 @@ class MsAssetsController extends Controller
             } else {
                 $action .= '<button class="btn btn-danger btn-sm" data-id="'.$assets['id'].'" id="delete" title="Delete"><i class="fas fa-trash"></i></button>';
             }
-            // $action .= '<button class="btn btn-primary btn-sm" data-id="'.$assets['id'].'" id="log" title="Log"><i class="fa fa-history"></i></button> </div>';
+            $action .= '<a href="'.route('detail.asset', $assets['id']).'" class="btn btn-info btn-sm" id="detail" title="detail"> <i class="fas fa-history"></i> </a> </div>';
             return $action;
         })
         ->rawColumns(['quantity', 'status', 'action'])
@@ -134,10 +165,13 @@ class MsAssetsController extends Controller
                             'quantity' => $request->quantity / $request->quantity,
                             'buy_at' => $request->buy_at,
                             'employee_id' => 20,
+                            'type' => 10,
                             'status' => 1,
                             'notes' => $request->notes ?? null,
                             'created_by' => Auth::id(),
                             'updated_by' => Auth::id(),
+                            'created_at' => now(),
+                            'updated_at' => now()
                         ],
                     ];
                     $query[] = Asset::insert($data);
@@ -153,11 +187,26 @@ class MsAssetsController extends Controller
                             'qty_in' => $request->quantity / $request->quantity,
                             'qty_out' => 0,
                             'notes' => 'stock awal',
-                            'created_at' => $request->created_at,
-                            'updated_at' => $request->updated_at
+                            'created_at' => now(),
+                            'updated_at' => now(),
                         ],
                     ];
                     Log::insert($log_asset);
+
+                    $asset_items = [
+                        [
+                            'date' => $request->buy_at,
+                            'code' => implode('.', $generate),
+                            'asset_id' => Asset::all()->last()->id,
+                            'quantity' => 1,
+                            'type' => 10,
+                            'employee_id' => null,
+                            'notes' => 'stock awal',
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]
+                    ];
+                    Asset_item::insert($asset_items);
                 }
 
             } else {
@@ -188,10 +237,13 @@ class MsAssetsController extends Controller
                     'quantity' => $request->quantity,
                     'buy_at' => $request->buy_at,
                     'employee_id' => 1,
+                    'type' => 10,
                     'status' => 1,
                     'notes' => $request->notes ?? null,
                     'created_by' => Auth::id(),
                     'updated_by' => Auth::id(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ];
                 $query[] = Asset::insert($data);
 
@@ -208,11 +260,28 @@ class MsAssetsController extends Controller
                         'qty_in' => $request->quantity,
                         'qty_out' => 0,
                         'notes' => 'stock awal',
-                        'created_at' => $request->created_at,
-                        'updated_at' => $request->updated_at
+                        'created_at' => now(),
+                        'updated_at' => now(),
                     ],
                 ];
                 Log::insert($log_asset);
+
+                for ($val = 1; $val <= $request->quantity; $val++) {
+                    $asset_items = [
+                        [
+                            'date' => $request->buy_at,
+                            'code' => implode('.', $generate),
+                            'asset_id' => Asset::all()->last()->id,
+                            'quantity' => 1,
+                            'type' => 10,
+                            'employee_id' => null,
+                            'notes' => 'stock awal',
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]
+                    ];
+                    Asset_item::insert($asset_items);
+                }
             }
 
             if (!$query) {
@@ -221,6 +290,58 @@ class MsAssetsController extends Controller
                 return response()->json(['code' => 1, 'msg' => 'New Assets has been successfuly saved']);
             }
         }
+    }
+
+    public function detailAsset(Request $request, $id)
+    {
+        $asset = Asset::where('id', $request->id)->first();
+        return view('ms_assets.detail_assets', compact('asset'));
+    }
+
+    public function showDetailAsset(Request $request, $id)
+    {
+        $asset_items = Asset_item::where('asset_id', $request->id)->orderBy('id', 'DESC')->get();
+        // dd($asset_items->toArray());
+        return DataTables::of($asset_items)
+        ->addIndexColumn()
+        ->editColumn('code', function($asset_items) {
+            return $asset_items->asset->code;
+        })
+        ->editColumn('asset', function($asset_items) {
+            return $asset_items->asset->name;
+        })
+        ->editColumn('employee', function($asset_items) {
+            if ($asset_items->employee_id == null) {
+                return '-';
+            } else {
+                return $asset_items->employee->Name;
+            }
+        })
+        ->editColumn('type', function($asset_items) {
+            if (FunctionHelper::DIKEMBALIKAN == $asset_items->type) {
+                return '<span class="name badge bg-success" style="color: white;"> DIKEMBALIKAN </span>';
+            } else if (FunctionHelper::DIPINJAMKAN == $asset_items->type) {
+                return '<span class="name badge bg-primary" style="color: white;"> DIPINJAMKAN </span>';
+            } else if (FunctionHelper::SERVICE == $asset_items->type) {
+                return '<span class="name badge bg-warning" style="color: white;"> SERVICE </span>';
+            } else if (FunctionHelper::RUSAK == $asset_items->type) {
+                return '<span class="name badge bg-danger" style="color: white;"> RUSAK </span>';
+            } else if (FunctionHelper::HILANG == $asset_items->type) {
+                return '<span class="name badge bg-danger" style="color: white;"> HILANG </span>';
+            } else if (FunctionHelper::KELUAR == $asset_items->type) {
+                return '<span class="name badge bg-info" style="color: white;"> KELUAR </span>';
+            } else if (FunctionHelper::HIBAH == $asset_items->type) {
+                return '<span class="name badge bg-secondary" style="color: white;"> HIBAH </span>';
+            } else if (FunctionHelper::BELI == $asset_items->type) {
+                return '<span class="name badge bg-success" style="color: white;"> BELI </span>';
+            } else if (FunctionHelper::JUAL == $asset_items->type) {
+                return '<span class="name badge bg-primary" style="color: white;"> JUAL </span>';
+            } else if (FunctionHelper::STOCK_AWAL == $asset_items->type) {
+                return '<span class="name badge bg-success" style="color: white;"> STOCK AWAL </span>';
+            }
+        })
+        ->rawColumns(['code', 'asset', 'employee', 'type'])
+        ->make(true);
     }
 
     public function updateAssets(Request $request, int $assets_id)
@@ -256,6 +377,7 @@ class MsAssetsController extends Controller
                     'buy_at' => $request->buy_at,
                     'notes' => $request->notes ?? null,
                     'updated_by' => Auth::id(),
+                    'updated_at' => now(),
                 ]);
             } else {
                 // dd($request->category_update);
@@ -280,6 +402,7 @@ class MsAssetsController extends Controller
                     'buy_at' => $request->buy_at,
                     'notes' => $request->notes ?? null,
                     'updated_by' => Auth::id(),
+                    'updated_at' => now(),
                 ]);
                 // Log::where('asset_id', $request->assets_id)->count() > 0 ? '' :
                 // dd($query);
@@ -291,7 +414,7 @@ class MsAssetsController extends Controller
                     'qty_in' => $request->quantity,
                     'qty_out' => 0,
                     'notes' => $request->quantity,
-                    'updated_at' => $request->updated_at
+                    'updated_at' => now(),
                 ]);
                 // $log_asset = [
                 //     [

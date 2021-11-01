@@ -11,6 +11,7 @@ use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 use App\Helpers\FunctionHelper;
+use App\Models\master\Asset_item;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -27,41 +28,8 @@ class MsLogController extends Controller
 
     public function index()
     {
-        // $cek = Log::select('qty_in', 'qty_out')->sum('qty_in', 'qty_out');
-        // $log = Log::select(DB::raw('SUM(qty_in) AS qty_in, SUM(qty_out) AS qty_out'))->get(); // dadi collection
-        // $log[0]->test = 'test';
-        // dd($log[0]); // dadi array
-        // $query_in = DB::select("SELECT SUM(qty_in) AS qty_in, SUM(qty_out) AS qty_out FROM logs");
-
-        // $logs = Log::all();
-        // $logs = DB::table('categories')->where('code', 'GA')->value('name');
-        // $logs = DB::table('categories')->find(3);
-        // $logs = DB::table('categories')->pluck('name', 'code');
-        // $logs = Log::latest('id')->select('id as id_log', 'date as date_log', 'asset_id as asset', 'qty_in as jumlah_masuk')->first();
-        // $logs = Log::latest('id')->select('id as id_log', 'date as date_log', 'asset_id as asset', 'qty_in as jumlah_masuk')->get()->chunk(10);
-        // $logs = Log::latest('id')->select('id as id_log', 'date as date_log', 'asset_id as asset', 'qty_in as jumlah_masuk', 'notes')->where('notes', 'LIKE', '%service%')->get();
-        // $logs = Log::first('id')->select('id as id_log', 'date as date_log', 'asset_id as asset', 'qty_in as jumlah_masuk', 'notes')->where('notes', 'LIKE', '%service%')->get();
-
-        // $asset = DB::table('assets')->count();
-        // $asset = DB::table('assets')->max('code');
-        // $asset = DB::table('assets')->min('code');
-        // $asset = DB::table('assets')->where('code', 'LIKE', '%IT%')->sum('quantity');
-        // $asset =  DB::table('assets')->where('code', 'LIKE', '%IT%')->avg('quantity');
-        // $asset = DB::table('assets')->where('code', 'LIKE', '%IT%')->get('quantity');
-
-        // $asset = DB::table('logs')->where('notes', 'LIKE', '%rusak%')->exists();
-        // $asset = DB::table('logs')->where('notes', 'LIKE', '%rusak%')->doesntExist();
-        // $logs = DB::table('logs')->where('notes', 'LIKE', '%dikembalikan%')->distinct()->get();
-
-        // $query = DB::table('logs')->select('notes');
-        // $logs = $query->addSelect('asset_id')->get();
-        // dd($logs);
-
         $logs = Log::all();
         return view('ms_log.index', compact('logs'));
-
-        // $emp = DB::connection('sqlsrv')->table('dbo.EmployeeInformation')->get();
-        // dd($emp);
     }
 
     public function getLog()
@@ -176,16 +144,33 @@ class MsLogController extends Controller
                     // ['employee_id', $request->employee_id],
                     ['qty_in', $request->qty_in]
                 ])->exists();
-                // dd($cek);
-                // dd($cek == true);
 
-                // $cek = Log::find($request->asset_id);
                 $log->qty_in = $request->qty_in;
                 $log->qty_out = 0;
-                // Asset::where('id', $request->asset_id)->update([
-                //     'quantity' => $asset->quantity + $request->qty_in,
-                // ]);
 
+                // Metode Update query builder
+                // try {
+
+                // }
+                $asset_item = Asset_item::where([
+                    // ['quantity', $request->quantity],
+                    // dd($request->type),
+                    ['asset_id', $request->asset_id],
+                    ['type', $request->type == FunctionHelper::DIKEMBALIKAN ? FunctionHelper::DIPINJAMKAN : $request->type],
+                    ['employee_id', $request->employee_id],
+                ])->first();
+                // dd( $asset_item );
+                if ( $asset_item == null ) {
+                    return response()->json(['code' => 0, 'msg' => 'Asset / Employee yang dipilih tidak sesuai']);
+                }
+                if ($asset_item->quantity < $request->qty_in) {
+                    return response()->json(['code' => 0, 'msg' => 'Quantity harus 1']);
+                }
+                // dd($asset_item);
+                $asset_item->type = FunctionHelper::STOCK_AWAL;
+                $asset_item->employee_id = null;
+                $asset_item->notes = $request->notes ?? null;
+                $query = $asset_item->save();
             } else {
                 if ($asset->quantity < $request->qty_in) {
                     return response()->json(['code' => 0, 'msg' => 'barang tidak cukup']);
@@ -195,6 +180,30 @@ class MsLogController extends Controller
                 // Asset::where('id', $request->asset_id)->update([
                 //     'quantity' => $asset->quantity - $request->qty_in,
                 // ]);
+
+                $asset_item = Asset_item::where([
+                            ['asset_id', $request->asset_id],
+                            ['type', 10]
+                        ])->first();
+                // dd($asset_item);
+                if ($asset_item == null) {
+                    return response()->json(['code' => 0, 'msg' => 'Tidak ada item yang tersedia']);
+                }
+                if ($asset_item->quantity < $request->qty_in) {
+                    return response()->json(['code' => 0, 'msg' => 'Quantity harus 1']);
+                }
+                $asset_item->update([
+                    'type' => $request->type,
+                    'employee_id' => $request->employee_id ?? null,
+                    'notes' => $request->notes ?? null,
+                    'updated_at' => now(),
+                ]);
+                        // ->update([
+                        //     'type' => $request->type,
+                        //     'employee_id' => $request->employee_id ?? null,
+                        //     'notes' => $request->notes,
+                        //     'updated_at' => now(),
+                        // ]);
             }
 
             $query = $log->save();

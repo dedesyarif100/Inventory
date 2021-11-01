@@ -9,8 +9,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Stockopname extends Model
 {
     use HasFactory, SoftDeletes;
-    protected $table = 'stockopnames';
-    protected $guarded = ['id', 'created_at', 'updated_at', 'deleted_at'];
 
     public function stockopnameCreateBy()
     {

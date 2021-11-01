@@ -9,8 +9,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Asset extends Model
 {
     use HasFactory, SoftDeletes;
-
-    protected $fillable = ['category_id', 'code', 'name', 'vendor_id', 'quantity', 'buy_at', 'employee_id', 'status', 'notes', 'created_by', 'updated_by'];
+    protected $fillable = ['category_id', 'code', 'name', 'vendor_id', 'quantity', 'buy_at', 'employee_id', 'type', 'status', 'notes', 'created_by', 'updated_by'];
 
     public function users()
     {

@@ -72,6 +72,8 @@ Route::middleware(['auth'])->prefix('master')->group( function () {
     Route::post('postassets', [MsAssetsController::class, 'sendToDB'])->name('sendtodatabase.assets');
     Route::patch('/updatedataassets/{id}', [MsAssetsController::class, 'updateAssets'])->name('update.assets');
     Route::get('showcode/{id}', [MsAssetsController::class, 'getResponseShowCode'])->name('getResponseShowCode.assets');
+    Route::get('detailasset/{id}', [MsAssetsController::class, 'detailAsset'])->name('detail.asset');
+    Route::get('show_detailassets/{id}', [MsAssetsController::class, 'showDetailAsset'])->name('show.detailasset');
     Route::post('deleteassets', [MsAssetsController::class, 'deleteAssets'])->name('delete.assets');
     Route::get('pageprint_qrcode', [MsAssetsController::class, 'pageprint_qrcode'])->name('pageprint.qrcode');
     Route::get('printqrcode', [MsAssetsController::class, 'getAllQRCode'])->name('print.qrcode');

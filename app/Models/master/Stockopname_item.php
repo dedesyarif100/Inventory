@@ -8,8 +8,6 @@ use Illuminate\Database\Eloquent\Model;
 class Stockopname_item extends Model
 {
     use HasFactory;
-    protected $table = 'stockopname_items';
-    protected $guarded = ['id', 'created_at', 'updated_at', 'deleted_at'];
 
     public function stockopname()
     {

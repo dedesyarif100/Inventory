@@ -4,6 +4,7 @@ namespace App\Imports;
 
 use Illuminate\Support\Facades\DB;
 use App\Models\master\Asset;
+use App\Models\master\Asset_item;
 use App\Models\master\Category;
 use App\Models\master\Log;
 use Illuminate\Support\Facades\Auth;
@@ -75,6 +76,10 @@ class AssetsImport implements ToCollection, WithHeadingRow, SkipsOnError, WithVa
                 $generate[2] = Str::padLeft($save, 4, '0');
             }
 
+            // if (!is_numeric($rows[$val]['quantity'])) {
+            //     return back()->withStatus('Failed Import, Quantity must be integer');
+            // }
+
             if ( $cekCategory == true ) {
                 // dd('true');
                 $asset = Asset::create([
@@ -85,6 +90,7 @@ class AssetsImport implements ToCollection, WithHeadingRow, SkipsOnError, WithVa
                     'quantity' => $rows[$val]['quantity'],
                     'buy_at' => $rows[$val]['buy_at'] == null ? now() : Carbon::create(\PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($rows[$val]['buy_at'])),
                     'employee_id' => 1,
+                    'type' => 10,
                     'status' => 1,
                     'notes' => $rows[$val]['notes'] ?? null,
                     'created_by' => Auth::id(),
@@ -113,6 +119,7 @@ class AssetsImport implements ToCollection, WithHeadingRow, SkipsOnError, WithVa
                     'quantity' => $rows[$val]['quantity'],
                     'buy_at' => $rows[$val]['buy_at'] == null ? now() : Carbon::create(\PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($rows[$val]['buy_at'])),
                     'employee_id' => 1,
+                    'type' => 10,
                     'status' => 1,
                     'notes' => $rows[$val]['notes'] ?? null,
                     'created_by' => Auth::id(),
@@ -122,6 +129,25 @@ class AssetsImport implements ToCollection, WithHeadingRow, SkipsOnError, WithVa
                 ]);
                 // dd($asset);
             }
+
+            // After import, Auto Create Asset_item
+            for ($qty = 0; $qty < $rows[$val]['quantity']; $qty++) {
+                $asset_items = [
+                    [
+                        'date' => $rows[$val]['buy_at'] == null ? now() : Carbon::create(\PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($rows[$val]['buy_at'])),
+                        'code' => implode('.', $generate),
+                        'asset_id' => Asset::all()->last()->id,
+                        'quantity' => 1,
+                        'type' => 10,
+                        'employee_id' => null,
+                        'notes' => 'stock awal',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]
+                ];
+                Asset_item::insert($asset_items);
+            }
+
             // After import, Auto Create Log Assets
             $log_asset = [
                 [
@@ -153,7 +179,7 @@ class AssetsImport implements ToCollection, WithHeadingRow, SkipsOnError, WithVa
         return [
             'category_code' => 'required',
             'name' => 'required',
-            'quantity' => 'required',
+            'quantity' => 'required|integer',
         ];
     }
 }
