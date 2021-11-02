@@ -42,7 +42,7 @@
                     <option value="{{ \App\Helpers\FunctionHelper::HIBAH }}">HIBAH</option>
                     <option value="{{ \App\Helpers\FunctionHelper::BELI }}">BELI</option>
                     <option value="{{ \App\Helpers\FunctionHelper::JUAL }}">JUAL</option>
-                    <option value="{{ \App\Helpers\FunctionHelper::STOCK_AWAL }}">STOCK AWAL</option>
+                    {{-- <option value="{{ \App\Helpers\FunctionHelper::STOCK_AWAL }}">STOCK AWAL</option> --}}
                 </select>
                 <span class="text-danger error-text type_error"></span>
             </div>

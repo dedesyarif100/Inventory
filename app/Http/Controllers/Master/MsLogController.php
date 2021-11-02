@@ -121,8 +121,14 @@ class MsLogController extends Controller
                 return response()->json(['code' => 0, 'msg' => 'asset is required']);
             } else if (empty($request->type)) {
                 return response()->json(['code' => 0, 'msg' => 'type is required']);
+            } else if ($request->type == FunctionHelper::DIKEMBALIKAN || $request->type == FunctionHelper::DIPINJAMKAN) {
+                if (empty($request->employee_id)) {
+                    return response()->json(['code' => 0, 'msg' => 'employee is required']);
+                } else if (empty($request->qty_in)) {
+                    return response()->json(['code' => 0, 'msg' => 'quantity is required']);
+                }
             } else if (empty($request->qty_in)) {
-                return response()->json(['code' => 0, 'msg' => 'employee / quantity is required']);
+                return response()->json(['code' => 0, 'msg' => 'quantity is required']);
             }
             // return response()->json(['code' => 0, 'msg' => 'error']);
         } else {
@@ -136,74 +142,108 @@ class MsLogController extends Controller
             $log->employee_id = $request->employee_id;
             $log->notes = $request->notes;
 
-            if ($request->type == FunctionHelper::DIKEMBALIKAN || $request->type == FunctionHelper::HIBAH || $request->type == FunctionHelper::BELI) {
-                $cek = Log::where([
-                    ['date', $request->date],
-                    ['asset_id', $request->asset_id],
-                    // ['type', $request->type],
-                    // ['employee_id', $request->employee_id],
-                    ['qty_in', $request->qty_in]
-                ])->exists();
+            // $asset_item = Asset_item::where([
+            //     ['asset_id', $request->asset_id],
+            //     ['type', $request->type == FunctionHelper::DIKEMBALIKAN ? FunctionHelper::DIPINJAMKAN : ( $request->type == FunctionHelper::DIPINJAMKAN ? FunctionHelper::STOCK_AWAL : $request->type ) ],
+            //     // dd($request->type),
+            //     ['employee_id', $request->employee_id],
+            // ])->get();
+            // dd($asset_item);
 
+            if ($request->type == FunctionHelper::DIKEMBALIKAN || $request->type == FunctionHelper::HIBAH || $request->type == FunctionHelper::BELI) {
                 $log->qty_in = $request->qty_in;
                 $log->qty_out = 0;
 
                 // Metode Update query builder
-                // try {
+                if ($request->type == FunctionHelper::DIKEMBALIKAN) {
+                    $cekEmployee = Asset_item::where([
+                        ['asset_id', $request->asset_id],
+                        ['type', FunctionHelper::DIPINJAMKAN],
+                        ['employee_id', $request->employee_id],
+                    ])->exists();
+                    // dd($cek);
+                    if ($cekEmployee == false) {
+                        return response()->json(['code' => 0, 'msg' => 'Barang tersebut tidak dipinjam karyawan yang bersangkutan']);
+                    } else {
+                        $asset_item = Asset_item::where([
+                            ['asset_id', $request->asset_id],
+                            ['type', FunctionHelper::DIPINJAMKAN],
+                            ['employee_id', $request->employee_id],
+                        ])->get();
+                        if ($asset_item->count() < $request->qty_in) {
+                            return response()->json(['code' => 0, 'msg' => 'Quantity melebihi jumlah barang yang dipinjam karyawan']);
+                        }
 
-                // }
-                $asset_item = Asset_item::where([
-                    // ['quantity', $request->quantity],
-                    // dd($request->type),
-                    ['asset_id', $request->asset_id],
-                    ['type', $request->type == FunctionHelper::DIKEMBALIKAN ? FunctionHelper::DIPINJAMKAN : $request->type],
-                    ['employee_id', $request->employee_id],
-                ])->first();
-                // dd( $asset_item );
-                if ( $asset_item == null ) {
-                    return response()->json(['code' => 0, 'msg' => 'Asset / Employee yang dipilih tidak sesuai']);
+                        for ($val = 0; $val < $request->qty_in; $val++) {
+                            $asset_item = Asset_item::where([
+                                ['asset_id', $request->asset_id],
+                                ['type', FunctionHelper::DIPINJAMKAN],
+                                ['employee_id', $request->employee_id],
+                            ])->first();
+                            // if ( $asset_item == null ) {
+                            //     return response()->json(['code' => 0, 'msg' => 'Asset / Employee yang dipilih tidak sesuai']);
+                            // }
+                            $asset_item->update([
+                                'type' => FunctionHelper::NORMAL,
+                                'employee_id' => null,
+                                'notes' => $request->notes ?? null,
+                                'updated_at' => now(),
+                            ]);
+                        }
+                    }
+                } else if ($request->type == FunctionHelper::BELI || $request->type == FunctionHelper::HIBAH) {
+                    $asset_item = Asset_item::where('asset_id', $request->asset_id)->first();
+                    for ($val = 0; $val < $request->qty_in; $val++) {
+                        Asset_item::create([
+                            'date' => $request->date,
+                            'code' => $asset_item->code,
+                            'asset_id' => $asset_item->asset_id,
+                            'quantity' => 1,
+                            'type' => 10,
+                            'employee_id' => null,
+                            'notes' => $request->notes ?? null,
+                        ]);
+                    }
+                    $asset = Asset::where('id', $request->asset_id)->first();
+
+                    Asset::where('id', $request->asset_id)->update([
+                        'quantity' => $asset->quantity + $request->qty_in,
+                    ]);
                 }
-                if ($asset_item->quantity < $request->qty_in) {
-                    return response()->json(['code' => 0, 'msg' => 'Quantity harus 1']);
-                }
-                // dd($asset_item);
-                $asset_item->type = FunctionHelper::STOCK_AWAL;
-                $asset_item->employee_id = null;
-                $asset_item->notes = $request->notes ?? null;
-                $query = $asset_item->save();
             } else {
-                if ($asset->quantity < $request->qty_in) {
-                    return response()->json(['code' => 0, 'msg' => 'barang tidak cukup']);
-                }
                 $log->qty_in = 0;
                 $log->qty_out = $request->qty_in;
-                // Asset::where('id', $request->asset_id)->update([
-                //     'quantity' => $asset->quantity - $request->qty_in,
-                // ]);
 
                 $asset_item = Asset_item::where([
-                            ['asset_id', $request->asset_id],
-                            ['type', 10]
-                        ])->first();
-                // dd($asset_item);
-                if ($asset_item == null) {
+                    ['asset_id', $request->asset_id],
+                    ['type', FunctionHelper::STOCK_AWAL],
+                ])->orWhere([
+                    ['asset_id', $request->asset_id],
+                    ['type', FunctionHelper::NORMAL],
+                ])->get();
+                // dd($asset_item->count());
+                if ( Asset_item::where([ ['asset_id', $request->asset_id], ['type', FunctionHelper::STOCK_AWAL] ])->doesntExist() && Asset_item::where([ ['asset_id', $request->asset_id], ['type', FunctionHelper::NORMAL] ])->doesntExist() ) {
                     return response()->json(['code' => 0, 'msg' => 'Tidak ada item yang tersedia']);
+                } else if ($asset_item->count() < $request->qty_in) {
+                    return response()->json(['code' => 0, 'msg' => 'Jumlah Stock Awal tidak cukup']);
+                } else {
+                    for ($val = 0; $val < $request->qty_in; $val++) {
+                        $asset_item = Asset_item::where([
+                                    ['asset_id', $request->asset_id],
+                                    ['type', FunctionHelper::STOCK_AWAL]
+                                ])->orWhere([
+                                    ['asset_id', $request->asset_id],
+                                    ['type', FunctionHelper::NORMAL]
+                                ])->first();
+
+                        $asset_item->update([
+                            'type' => $request->type,
+                            'employee_id' => $request->employee_id ?? null,
+                            'notes' => $request->notes ?? null,
+                            'updated_at' => now(),
+                        ]);
+                    }
                 }
-                if ($asset_item->quantity < $request->qty_in) {
-                    return response()->json(['code' => 0, 'msg' => 'Quantity harus 1']);
-                }
-                $asset_item->update([
-                    'type' => $request->type,
-                    'employee_id' => $request->employee_id ?? null,
-                    'notes' => $request->notes ?? null,
-                    'updated_at' => now(),
-                ]);
-                        // ->update([
-                        //     'type' => $request->type,
-                        //     'employee_id' => $request->employee_id ?? null,
-                        //     'notes' => $request->notes,
-                        //     'updated_at' => now(),
-                        // ]);
             }
 
             $query = $log->save();

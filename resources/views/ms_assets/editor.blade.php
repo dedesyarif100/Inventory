@@ -85,7 +85,7 @@
             </div>
             <div class="form-group float-left @if (!empty($assets)) d-none @endif">
                 <input type="checkbox" class="form-check-input" name="same_qrcode" value="1" id="exampleCheck1" style="margin-left: 1px;">
-                <label class="form-check-label" for="exampleCheck1" style="margin-left: 1px;"> Make same code </label>
+                <label class="form-check-label" for="exampleCheck1" style="margin-left: 1px; cursor: pointer;"> Make same code </label>
             </div>
             <div class="form-group">
                 <button type="submit" class="btn btn-block btn-success">Save Changes</button>

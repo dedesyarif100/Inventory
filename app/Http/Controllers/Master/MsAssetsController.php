@@ -32,8 +32,6 @@ class MsAssetsController extends Controller
 
     public function index()
     {
-        $log = Log::where('asset_id', 2)->get()->toArray();
-        // dd($log);
         return view('ms_assets.index');
     }
 
@@ -43,6 +41,9 @@ class MsAssetsController extends Controller
         // dd($assets->toArray());
         return DataTables::of($assets)
         ->addIndexColumn()
+        ->editColumn('category', function ($assets) {
+            return $assets->category->name;
+        })
         ->editColumn('vendor', function ($assets) {
             return $assets->vendor->name;
         })
@@ -58,33 +59,35 @@ class MsAssetsController extends Controller
             // dd($asset_items);
             $saveHelper = '';
             $saveTotalType = '';
-            for ($a = 0; $a < count($asset_items); $a ++) {
+            for ($a = 0; $a < count($asset_items); $a++) {
                 if ($asset_items[$a]->type == FunctionHelper::DIKEMBALIKAN) {
-                    $saveHelper = '<span class="name badge bg-success" style="color: white;"> Dikembalikan </span>';
+                    $saveHelper = '<span class="name badge bg-success" style="color: white;">%s - Dikembalikan </span>';
                 } else if ($asset_items[$a]->type == FunctionHelper::DIPINJAMKAN) {
-                    $saveHelper = '<span class="name badge bg-primary" style="color: white;"> Dipinjamkan </span>';
+                    $saveHelper = '<span class="name badge bg-primary" style="color: white;">%s - Dipinjamkan </span>';
                 } else if ($asset_items[$a]->type == FunctionHelper::SERVICE) {
-                    $saveHelper = '<span class="name badge bg-warning" style="color: white;"> Services </span>';
+                    $saveHelper = '<span class="name badge bg-warning" style="color: white;">%s - Services </span>';
                 } else if ($asset_items[$a]->type == FunctionHelper::RUSAK) {
-                    $saveHelper = '<span class="name badge bg-danger" style="color: white;"> Rusak </span>';
+                    $saveHelper = '<span class="name badge bg-danger" style="color: white;">%s - Rusak </span>';
                 } else if ($asset_items[$a]->type == FunctionHelper::HILANG) {
-                    $saveHelper = '<span class="name badge bg-danger" style="color: white;"> Hilang </span>';
+                    $saveHelper = '<span class="name badge bg-danger" style="color: white;">%s - Hilang </span>';
                 } else if ($asset_items[$a]->type == FunctionHelper::KELUAR) {
-                    $saveHelper = '<span class="name badge bg-info" style="color: white;"> Keluar </span>';
+                    $saveHelper = '<span class="name badge bg-info" style="color: white;">%s - Keluar </span>';
                 } else if ($asset_items[$a]->type == FunctionHelper::HIBAH) {
-                    $saveHelper = '<span class="name badge bg-secondary" style="color: white;"> Hibah </span>';
+                    $saveHelper = '<span class="name badge bg-secondary" style="color: white;">%s - Hibah </span>';
                 } else if ($asset_items[$a]->type == FunctionHelper::BELI) {
-                    $saveHelper = '<span class="name badge bg-success" style="color: white;"> Beli </span>';
+                    $saveHelper = '<span class="name badge bg-success" style="color: white;">%s - Beli </span>';
                 } else if ($asset_items[$a]->type == FunctionHelper::JUAL) {
-                    $saveHelper = '<span class="name badge bg-primary" style="color: white;"> Jual </span>';
+                    $saveHelper = '<span class="name badge bg-primary" style="color: white;">%s - Jual </span>';
                 } else if ($asset_items[$a]->type == FunctionHelper::STOCK_AWAL) {
-                    $saveHelper = '<span class="name badge bg-success" style="color: white;"> Stock Awal </span>';
+                    $saveHelper = '<span class="name badge bg-success" style="color: white;">%s - Stock Awal </span>';
+                } else if ($asset_items[$a]->type == FunctionHelper::NORMAL) {
+                    $saveHelper = '<span class="name badge bg-success" style="color: white;">%s - Normal </span>';
                 }
                 $saveHtml[$a] = $saveHelper;
             }
             $save = array_count_values($saveHtml);
             foreach ($save as $key => $value) {
-                $cek[] = '<span class="name badge bg-white" style="color: black;"> '.$value.' </span>'.''.$key;
+                $cek[] = sprintf($key, $value);
             }
 
             // dd($cek);
@@ -110,7 +113,7 @@ class MsAssetsController extends Controller
             } else {
                 $action .= '<button class="btn btn-danger btn-sm" data-id="'.$assets['id'].'" id="delete" title="Delete"><i class="fas fa-trash"></i></button>';
             }
-            $action .= '<a href="'.route('detail.asset', $assets['id']).'" class="btn btn-info btn-sm" id="detail" title="detail"> <i class="fas fa-history"></i> </a> </div>';
+            $action .= '<a href="'.route('detail.asset', $assets['id']).'" class="btn btn-info btn-sm" id="detail" title="detail"> <i class="fas fa-tasks"></i> </a> </div>';
             return $action;
         })
         ->rawColumns(['quantity', 'status', 'action'])
@@ -338,6 +341,8 @@ class MsAssetsController extends Controller
                 return '<span class="name badge bg-primary" style="color: white;"> JUAL </span>';
             } else if (FunctionHelper::STOCK_AWAL == $asset_items->type) {
                 return '<span class="name badge bg-success" style="color: white;"> STOCK AWAL </span>';
+            } else if (FunctionHelper::NORMAL == $asset_items->type) {
+                return '<span class="name badge bg-success" style="color: white;"> NORMAL </span>';
             }
         })
         ->rawColumns(['code', 'asset', 'employee', 'type'])

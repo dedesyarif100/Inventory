@@ -36,14 +36,14 @@ Assets
     @endif
     <div class="row">
         <div class="col-0.5" style="padding: 2px; margin-left: 20px;">
-            <button class="btn btn-success btn-sm" id="create">Create</button>
+            <button class="btn btn-success btn-sm rounded-0" id="create">Create</button>
         </div>
         <div class="col-0.5" style="padding: 2px; ">
-            <a href="{{ route('pageprint.qrcode') }}" class="btn btn-info btn-sm" id="print">Print QRCode</a>
+            <a href="{{ route('pageprint.qrcode') }}" class="btn btn-info btn-sm rounded-0" id="print">Print QRCode</a>
         </div>
         <input type="hidden" id="element-to-print">
-        <div class="col-xl-6 col-lg-3 col-md-1 col-sm-0.1" id="export" style="padding: 2px; ">
-            <a href="{{ route('export.template') }}" class="btn btn-primary btn-sm float-right">Export Template</a>
+        <div class="col-xl-6 col-lg-3" id="export" style="padding: 2px; ">
+            <a href="{{ route('export.template') }}" class="btn btn-primary btn-sm float-right rounded-0">Export Template</a>
         </div>
         <div class="col-xl-4 col-lg-7 col-md-7" id="form-group" style="padding: 2px;">
             <form action="{{ route('import.assets') }}" method="post" enctype="multipart/form-data">
@@ -51,10 +51,10 @@ Assets
                 <div class="form-group float-right" style="padding: 0;">
                     <div class="input-group">
                         <input type="file" name="file" accept=".xlsx, .xls" id="files" style="visibility: hidden; height: 30px; padding: 0;" class="form-control input-file" aria-describedby="inputGroupFileAddon03" required>
-                        <label class="file-label" for="files" style="border: 1px solid; width: 80%; background-color: white; opacity: 0.5; padding: 10px 13px; cursor: pointer;">Choose file</label>
+                        <label class="file-label" for="files" style="border: 1px solid; width: 80%; height: 35px; background-color: white; opacity: 0.5; padding: 5px 13px; cursor: pointer;">Choose file</label>
                         <label class="input-group-btn">
-                            <span class="btn btn-success">
-                                <button type="submit" id="import" class="btn btn-success btn-sm" style="padding: 0px 0px; width: 40%;">Import</button>
+                            <span class="btn btn-success rounded-0" style="height: 35px; padding: 0px 0px;">
+                                <button type="submit" id="import" class="btn btn-sm" style="color: white;">Import</button>
                                 {{-- <input type="hidden" name="file" id="showhidden" for="import"> --}}
                             </span>
                         </label>
@@ -150,6 +150,9 @@ Assets
                     showInfo: true,
                     showNavigationButtons: true
                 },
+                groupPanel: {
+                    visible: true,
+                },
                 columns: [
                     {
                         dataField: "DT_RowIndex",
@@ -158,45 +161,59 @@ Assets
                         orderable: false,
                         searchable: false,
                         width: 60,
+                        allowGrouping: false
+                    },
+                    {
+                        dataField: 'category',
+                        dataType: 'string',
+                        groupIndex: 0,
                     },
                     {
                         dataField: 'code',
-                        dataType: 'string'
+                        dataType: 'string',
+                        allowGrouping: false
                     },
                     {
                         dataField: 'name',
-                        dataType: 'string'
+                        dataType: 'string',
+                        allowGrouping: false
                     },
                     {
                         dataField: 'vendor',
                         dataType: 'string',
-                        type: 'html'
+                        type: 'html',
+                        allowGrouping: false
                     },
                     {
                         dataField: 'quantity',
                         dataType: 'number',
                         width: 80,
-                        type: 'html'
+                        type: 'html',
+                        allowGrouping: false
                     },
                     {
                         dataField: 'buy_at',
                         dataType: 'datetime',
                         format: 'dd-MM-yyyy',
+                        allowGrouping: false
                     },
                     {
                         dataField: 'status',
                         dataType: 'string',
                         type: 'html',
-                        allowFiltering: false
+                        allowFiltering: false,
+                        allowGrouping: false
                     },
                     {
                         dataField: 'notes',
-                        dataType: 'string'
+                        dataType: 'string',
+                        allowGrouping: false
                     },
                     {
                         dataField: 'action',
                         type: 'html',
-                        allowFiltering: false
+                        allowFiltering: false,
+                        allowGrouping: false
                     }
                 ]
             };
@@ -230,6 +247,13 @@ Assets
                     sendData.columnWidth = 200;
                 }
                 $("#gridContainer").dxDataGrid(sendData);
+                $('#autoExpand').dxCheckBox({
+                    value: true,
+                    text: 'Expand All Groups',
+                    onValueChanged(data) {
+                        dataGrid.option('grouping.autoExpandAll', data.value);
+                    },
+                });
             }
             // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Get All Data >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
